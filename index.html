@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binomo Pro AI Bot v8.0</title>
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --gold: #ffcc00;
+            --up: #00ff88;
+            --down: #ff4757;
+            --bg-dark: #050505;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            height: 100vh; width: 100vw; 
+            background-color: var(--bg-dark);
+            color: white; display: flex; justify-content: center; overflow: hidden;
+            position: relative;
+        }
+
+        /* ব্যাকগ্রাউন্ড ক্যান্ডেলস্টিক এনিমেশন */
+        #bg-candle-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; gap: 15px; padding: 0 10px;
+            z-index: -1; opacity: 0.2;
+        }
+        .bg-candle {
+            width: 45px; border-radius: 5px; flex-shrink: 0;
+            transition: height 0.3s ease-in-out;
+        }
+
+        .app-shell {
+            width: 100%; max-width: 450px; height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex; flex-direction: column;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        header {
+            padding: 15px 20px; background: rgba(0, 0, 0, 0.85);
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--primary);
+        }
+        .profile { display: flex; align-items: center; gap: 12px; }
+        .avatar { 
+            width: 40px; height: 40px; border-radius: 50%; 
+            background: var(--primary); color: #000; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 18px; box-shadow: 0 0 15px var(--primary); 
+        }
+
+        .main-stats { padding: 20px 0; display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .ring-box { width: 140px; height: 140px; position: relative; display: flex; justify-content: center; align-items: center; }
+        svg { transform: rotate(-90deg); width: 140px; height: 140px; }
+        .ring-bg { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 10; }
+        .ring-fill { 
+            fill: none; stroke: var(--primary); stroke-width: 12; stroke-linecap: round; 
+            stroke-dasharray: 440; stroke-dashoffset: 440; transition: stroke-dashoffset 1.5s ease-out; 
+        }
+        .percentage { position: absolute; font-size: 32px; font-weight: 900; color: var(--primary); text-shadow: 0 0 15px var(--primary); }
+
+        .hex-data { 
+            background: rgba(0, 242, 254, 0.1); border: 1px solid var(--primary); 
+            padding: 12px; border-radius: 12px; width: 120px; text-align: center; 
+        }
+        #hex-stream { font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold; color: white; }
+
+        .controls { padding: 10px 20px; flex-grow: 1; overflow-y: auto; }
+        .label { font-size: 10px; color: #aaa; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 1px; }
+        
+        .dropdown { 
+            width: 100%; padding: 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.9); 
+            border: 1px solid var(--primary); color: white; font-size: 14px; margin-bottom: 12px; outline: none; 
+        }
+
+        .result-box { 
+            margin: 10px 20px; padding: 20px; border-radius: 18px; 
+            background: rgba(0, 0, 0, 0.85); border: 2px dashed var(--primary); 
+            text-align: center; min-height: 100px; display: flex; flex-direction: column; justify-content: center; 
+        }
+
+        .analyze-btn { 
+            margin: 15px 20px; padding: 18px; border-radius: 15px; border: none; 
+            background: linear-gradient(90deg, #00f2fe, #0072ff); 
+            color: white; font-weight: 900; font-size: 18px; cursor: pointer; 
+            box-shadow: 0 5px 25px rgba(0, 242, 254, 0.5); 
+        }
+
+        nav { display: flex; justify-content: space-around; padding: 15px; background: rgba(0, 0, 0, 0.95); border-top: 1px solid var(--primary); }
+        .nav-link { text-align: center; color: #555; font-size: 11px; cursor: pointer; text-decoration: none; }
+        .nav-link.active { color: var(--primary); }
+
+        #splash { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; }
+    </style>
+</head>
+<body>
+
+    <div id="bg-candle-container"></div>
+
+    <div id="splash">
+        <h1 style="color: var(--primary); letter-spacing: 5px; margin-bottom: 20px;">BINOMO AI v8.0</h1>
+        <input type="text" id="user-input" placeholder="Trader Name" class="dropdown" style="text-align: center; max-width: 250px;">
+        <button onclick="launchBot()" class="analyze-btn" style="width: 200px; margin: 10px 0;">Initialize Engine</button>
+    </div>
+
+    <div class="app-shell">
+        <header>
+            <div class="profile">
+                <div class="avatar" id="av-icon">S</div>
+                <div><h4 id="user-name">Trader</h4><p style="font-size: 9px; color: var(--up);">● SECURE SESSION</p></div>
+            </div>
+            <div style="font-size: 12px; font-weight: bold; color: var(--primary); background: rgba(0,242,254,0.1); padding: 5px 12px; border-radius: 20px;">CORE PRO</div>
+        </header>
+
+        <div class="main-stats">
+            <div class="ring-box">
+                <svg><circle class="ring-bg" cx="70" cy="70" r="65"></circle><circle id="progress-ring" class="ring-fill" cx="70" cy="70" r="65"></circle></svg>
+                <div class="percentage" id="acc-val">0%</div>
+            </div>
+            <div class="hex-data">
+                <div style="font-size: 9px; color: var(--primary); margin-bottom: 5px;">DATA ANALYTICS</div>
+                <div id="hex-stream">F4-A9</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <label class="label">Choose Binomo Market (50+ Assets)</label>
+            <select class="dropdown" id="market-asset">
+                <optgroup label="Binomo Specials">
+                    <option value="Crypto IDX">₿ Crypto IDX</option>
+                    <option value="Altcoin IDX">🚀 Altcoin IDX</option>
+                    <option value="CIB IDX">💎 CIB IDX</option>
+                    <option value="AEX IDX">📊 AEX IDX</option>
+                </optgroup>
+                <optgroup label="Currencies (Majors)">
+                    <option value="EUR/USD">🇪🇺 EUR/USD</option>
+                    <option value="GBP/USD">🇬🇧 GBP/USD</option>
+                    <option value="USD/JPY">🇯🇵 USD/JPY</option>
+                    <option value="AUD/USD">🇦🇺 AUD/USD</option>
+                    <option value="USD/CAD">🇨🇦 USD/CAD</option>
+                    <option value="USD/CHF">🇨🇭 USD/CHF</option>
+                    <option value="NZD/USD">🇳🇿 NZD/USD</option>
+                </optgroup>
+                <optgroup label="Currencies (OTC)">
+                    <option value="EUR/USD (OTC)">🇪🇺 EUR/USD (OTC)</option>
+                    <option value="GBP/USD (OTC)">🇬🇧 GBP/USD (OTC)</option>
+                    <option value="USD/JPY (OTC)">🇯🇵 USD/JPY (OTC)</option>
+                    <option value="EUR/JPY (OTC)">🇪🇺 EUR/JPY (OTC)</option>
+                    <option value="AUD/CAD (OTC)">🇦🇺 AUD/CAD (OTC)</option>
+                    <option value="NZD/USD (OTC)">🇳🇿 NZD/USD (OTC)</option>
+                </optgroup>
+                <optgroup label="Commodities & Metals">
+                    <option value="Gold (XAU)">🟡 Gold (XAU)</option>
+                    <option value="Silver (XAG)">⚪ Silver (XAG)</option>
+                    <option value="Oil (Brent)">🛢️ Oil (Brent)</option>
+                </optgroup>
+                <optgroup label="Stocks & Indices">
+                    <option value="Apple">🍎 Apple Inc.</option>
+                    <option value="Google">🔍 Google</option>
+                    <option value="Amazon">📦 Amazon</option>
+                    <option value="Facebook">👥 Facebook</option>
+                    <option value="Tesla">⚡ Tesla</option>
+                    <option value="Microsoft">💻 Microsoft</option>
+                    <option value="S&P 500">📉 S&P 500</option>
+                    <option value="DAX 30">🇩🇪 DAX 30</option>
+                </optgroup>
+                <optgroup label="Cryptocurrencies">
+                    <option value="Bitcoin">₿ Bitcoin</option>
+                    <option value="Ethereum">💠 Ethereum</option>
+                    <option value="Litecoin">Ł Litecoin</option>
+                    <option value="Ripple">🌊 Ripple (XRP)</option>
+                </optgroup>
+            </select>
+            
+            <label class="label">Trading Time</label>
+            <select class="dropdown">
+                <option>1 Minute (Turbo)</option>
+                <option>2 Minutes</option>
+                <option>5 Minutes</option>
+                <option>15 Minutes</option>
+                <option>30 Minutes</option>
+                <option>1 Hour</option>
+            </select>
+        </div>
+
+        <div class="result-box" id="sig-display">
+            <p style="color: #666;">Waiting for Market Selection...</p>
+        </div>
+
+        <button class="analyze-btn" onclick="getSignal()">⚡ GET BINOMO SIGNAL</button>
+
+        <nav>
+            <div class="nav-link active">📊<p>Signals</p></div>
+            <div class="nav-link">🏆<p>VIP</p></div>
+            <a href="https://t.me/Suman_trader_70" class="nav-link" style="text-decoration:none;">🎧<p>Support</p></a>
+        </nav>
+    </div>
+
+    <script>
+        function launchBot() {
+            const name = document.getElementById('user-input').value;
+            if(name) {
+                document.getElementById('user-name').innerText = name;
+                document.getElementById('av-icon').innerText = name[0].toUpperCase();
+                document.getElementById('splash').style.display = 'none';
+                startBgCandles();
+                startHexFlow();
+            }
+        }
+
+        function startBgCandles() {
+            const container = document.getElementById('bg-candle-container');
+            for(let i=0; i < 15; i++) {
+                const div = document.createElement('div');
+                div.className = 'bg-candle';
+                div.style.height = Math.random() * 80 + 10 + '%';
+                div.style.backgroundColor = Math.random() > 0.5 ? 'var(--up)' : 'var(--down)';
+                container.appendChild(div);
+            }
+            setInterval(() => {
+                const candles = container.getElementsByClassName('bg-candle');
+                for(let c of candles) {
+                    c.style.height = Math.random() * 90 + 5 + '%';
+                    if(Math.random() > 0.7) c.style.backgroundColor = c.style.backgroundColor.includes('00ff88') ? 'var(--down)' : 'var(--up)';
+                }
+            }, 500);
+        }
+
+        function startHexFlow() {
+            const hexBox = document.getElementById('hex-stream');
+            const chars = '0123456789ABCDEF';
+            setInterval(() => {
+                let r = () => chars[Math.floor(Math.random()*16)] + chars[Math.floor(Math.random()*16)];
+                hexBox.innerText = `${r()}-${r()}`;
+            }, 200);
+        }
+
+        function getSignal() {
+            const ring = document.getElementById('progress-ring');
+            const val = document.getElementById('acc-val');
+            const box = document.getElementById('sig-display');
+            
+            box.innerHTML = `<p style="color: var(--primary); font-weight: bold; animation: blink 0.8s infinite;">ANALYZING BINOMO CORE...</p>`;
+            ring.style.strokeDashoffset = 440;
+
+            setTimeout(() => {
+                const accuracy = Math.floor(Math.random() * 6) + 93;
+                const isCall = Math.random() > 0.5;
+                const color = isCall ? 'var(--up)' : 'var(--down)';
+                const direction = isCall ? 'CALL (UP) ⬆️' : 'PUT (DOWN) ⬇️';
+
+                ring.style.strokeDashoffset = 440 - (accuracy / 100 * 440);
+                ring.style.stroke = color;
+                val.innerText = accuracy + '%';
+                val.style.color = color;
+                
+                box.innerHTML = `
+                    <h2 style="color:${color}; font-size: 26px; text-shadow: 0 0 10px ${color};">${direction}</h2>
+                    <p style="font-size:11px; color:#aaa; margin-top:5px;">Market: ${document.getElementById('market-asset').value}</p>
+                `;
+            }, 2500);
+        }
+    </script>
+</body>
+  </html>
